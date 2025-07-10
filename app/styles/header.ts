@@ -1,12 +1,16 @@
 import { StyleSheet } from 'react-native';
 
 export const headerStyles = StyleSheet.create({
+  safeArea: {
+    backgroundColor: '#ffffff',
+  },
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingBottom: 12,
+    paddingTop:45,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#f1f1f1',
@@ -22,7 +26,7 @@ export const headerStyles = StyleSheet.create({
   userButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
     padding: 8,
     borderRadius: 8,
     backgroundColor: '#f8fafc',
