@@ -26,24 +26,24 @@ export function ProductCard({
       </View>
       <View style={styles.info}>
         <View style={styles.header}>
-          <Text style={styles.name}>{product.name}</Text>
+          <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
           <View style={styles.quantityControls}>
             <TouchableOpacity 
               style={styles.quantityButton}
               onPress={() => onUpdateQuantity(false)}
             >
-              <Minus size={18} color="#64748b" />
+              <Minus size={16} color="#64748b" />
             </TouchableOpacity>
             <Text style={styles.quantityText}>{quantity}</Text>
             <TouchableOpacity 
               style={styles.quantityButton}
               onPress={() => onUpdateQuantity(true)}
             >
-              <Plus size={18} color="#64748b" />
+              <Plus size={16} color="#64748b" />
             </TouchableOpacity>
           </View>
         </View>
-        <Text style={styles.description}>{product.description}</Text>
+        <Text style={styles.description} numberOfLines={2}>{product.description}</Text>
         <View style={styles.priceContainer}>
           <Text style={styles.priceNet}>€{product.price.toFixed(2)}</Text>
           <Text style={styles.priceGross}>KDV Dahil: €{grossPrice.toFixed(2)}</Text>
@@ -54,7 +54,7 @@ export function ProductCard({
         >
           {isInList ? (
             <View style={styles.buttonContent}>
-              <Check size={20} color="#ffffff" />
+              <Check size={18} color="#ffffff" />
               <Text style={styles.buttonText}>Listede</Text>
             </View>
           ) : (
@@ -80,17 +80,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+    minHeight: 160,
   },
   imageContainer: {
-    width: 140,
-    height: '100%',
+    width: 120,
+    minHeight: 160,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f8fafc',
   },
   image: {
-    width: 140,
-    height: 140,
+    width: 120,
+    height: 120,
     resizeMode: 'cover',
   },
   info: {

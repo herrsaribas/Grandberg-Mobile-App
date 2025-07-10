@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
-import { useFrameworkReady } from '@/hooks/useFrameworkReady';
+import { useFrameworkReady } from '@/../hooks/useFrameworkReady';
 import { useAuthStore } from './store/authStore';
 import { UserHeader } from './components/layout/UserHeader';
 import { SafeAreaProvider } from 'react-native-safe-area-context';

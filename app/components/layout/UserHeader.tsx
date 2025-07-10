@@ -1,9 +1,9 @@
 import { View, Text, TouchableOpacity, Image, Modal, Pressable, SafeAreaView } from 'react-native';
 import { User, Settings, ShoppingBag, LogOut, ChevronDown } from 'lucide-react-native';
-import { useAuthStore } from '../../store/authStore';
+import { useAuthStore } from '@/store/authStore';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { headerStyles } from '../../styles/header';
+import { headerStyles } from '@/styles/header';
 
 export function UserHeader() {
   const { isAuthenticated, user, logout } = useAuthStore();
