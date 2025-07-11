@@ -1,7 +1,11 @@
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
+import { registerForPushNotificationsAsync } from '../lib/notifications';
+import { userService } from '../services/userService';
+import { Platform } from 'react-native';
+import * as Device from 'expo-device';
 
 interface UserProfile {
   id: string;
@@ -57,60 +61,135 @@ export const useAuthStore = create<AuthState>()(
       },
 
       initialize: async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          const isAdmin = session.user.app_metadata?.role === 'admin';
-          const userProfile = await get().fetchUserProfile(session.user.id);
+        try {
+          const { data: { session }, error } = await supabase.auth.getSession();
           
-          set({ 
-            isAuthenticated: true, 
-            isAdmin, 
-            user: userProfile,
-            session 
-          });
-        }
+          if (error) {
+            console.error('Session error:', error);
+            return;
+          }
 
-        supabase.auth.onAuthStateChange(async (event, session) => {
-          if (event === 'SIGNED_IN' && session?.user) {
-            const isAdmin = session.user.app_metadata?.role === 'admin';
+          if (session?.user) {
             const userProfile = await get().fetchUserProfile(session.user.id);
+            const isAdmin = session.user.app_metadata?.role === 'admin';
             
             set({ 
               isAuthenticated: true, 
-              isAdmin, 
+              isAdmin,
               user: userProfile,
               session 
             });
-          } else if (event === 'SIGNED_OUT') {
-            set({ 
-              isAuthenticated: false, 
-              isAdmin: false, 
-              user: null,
-              session: null 
-            });
+//if Admin save push token
+            if (isAdmin) {
+              try {
+                const token = await registerForPushNotificationsAsync();
+                if (token) {
+                  await userService.saveAdminPushToken(
+                    session.user.id, 
+                    token,
+                    {
+                      platform: Platform.OS,
+                      deviceName: await Device.deviceName,
+                      osVersion: Device.osVersion
+                    }
+                  );
+                  console.log('Admin push token saved successfully');
+                }
+              } catch (error) {
+                console.error('Error saving admin push token:', error);
+              }
+            }
+
+            // Handle pending user data if exists
+            try {
+              const pendingDataString = await AsyncStorage.getItem('pendingUserData');
+              if (pendingDataString) {
+                const pendingData = JSON.parse(pendingDataString);
+                
+                // Check if this matches the verified user
+                if (pendingData.userId === session.user.id) {
+                  // Create the user profile
+                  const { error: profileError } = await supabase.from('users').insert({
+                    id: session.user.id,
+                    email: pendingData.email,
+                    full_name: pendingData.full_name,
+                    company_name: pendingData.company_name,
+                    phone: pendingData.phone,
+                    tax_id: pendingData.tax_id || null,
+                    address: pendingData.address || null,
+                    sector: pendingData.sector,
+                  });
+
+                  if (!profileError) {
+                    // Clear pending data
+                    await AsyncStorage.removeItem('pendingUserData');
+                    
+                    // Fetch updated profile
+                    const updatedProfile = await get().fetchUserProfile(session.user.id);
+                    set({ user: updatedProfile });
+                  }
+                }
+              }
+            } catch (error) {
+              console.warn('Error handling pending user data:', error);
+            }
           }
-        });
+        } catch (error) {
+          console.error('Initialize error:', error);
+        }
       },
 
       login: async (email: string, password: string) => {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
 
-        if (!error && data.user) {
-          const isAdmin = data.user.app_metadata?.role === 'admin';
+          if (error) {
+            return { error };
+          }
+
+          if (!data.user || !data.session) {
+            return { error: new Error('Login failed') };
+          }
+
           const userProfile = await get().fetchUserProfile(data.user.id);
+          const isAdmin = data.user.app_metadata?.role === 'admin';
           
           set({ 
             isAuthenticated: true, 
-            isAdmin, 
+            isAdmin,
             user: userProfile,
             session: data.session 
           });
-        }
 
-        return { error };
+          // if Admin logged in save push token
+          if (isAdmin) {
+            try {
+              const token = await registerForPushNotificationsAsync();
+              if (token) {
+                await userService.saveAdminPushToken(
+                  data.user.id, 
+                  token,
+                  {
+                    platform: Platform.OS,
+                    deviceName: await Device.deviceName,
+                    osVersion: Device.osVersion
+                  }
+                );
+                console.log('Admin push token saved on login');
+              }
+            } catch (error) {
+              console.error('Error saving admin push token on login:', error);
+            }
+          }
+
+          return { error: null };
+        } catch (error) {
+          console.error('Login error:', error);
+          return { error };
+        }
       },
 
       signup: async (email: string, password: string, userData: any) => {
@@ -217,7 +296,7 @@ export const useAuthStore = create<AuthState>()(
           set({ 
             isAuthenticated: false, 
             isAdmin: false, 
-            user: null,
+            user: null, 
             session: null 
           });
         }

@@ -1,5 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { OrderWithItems, OrderStatus } from '../types/order';
+import { userService } from './userService';
+import { sendPushNotification } from '../lib/notifications';
 
 interface CreateOrderParams {
   userId: string;
@@ -55,6 +57,33 @@ export const orderService = {
         .insert(orderItems);
 
       if (itemsError) throw itemsError;
+
+      // Send notification to admins about new order
+      try {
+        const adminTokensResult = await userService.getAdminPushTokens();
+        if (adminTokensResult.success && adminTokensResult.tokens) {
+          const notificationPromises = adminTokensResult.tokens.map(token =>
+            sendPushNotification(
+              token,
+              'Yeni Sipariş!',
+              `Yeni bir sipariş alındı. Toplam: €${total.toFixed(2)}`,
+              { 
+                type: 'new_order',
+                orderId: order.id,
+                screen: '/admin/orders'
+              }
+            )
+          );
+          
+          // Send notifications in parallel but don't wait for them to complete
+          Promise.all(notificationPromises).catch(error => {
+            console.error('Error sending notifications:', error);
+          });
+        }
+      } catch (notificationError) {
+        // Don't fail the order creation if notification fails
+        console.error('Error sending order notifications:', notificationError);
+      }
 
       return { success: true, data: order };
     } catch (error) {
